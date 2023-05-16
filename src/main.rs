@@ -5,7 +5,7 @@ use reqwest::header;
 
 use serde::Deserialize;
 use serde_json::Value;
-use tokio::io::{self, AsyncReadExt};
+use tokio_stream::StreamExt;
 
 const API_KEY: &str = "l00OLYhljlpXrMrbkUMNoydmez8duIPj2YpkXtpBeG3xmkw78yLUQro0";
 const BASE_API_URL: &str = "https://api.pexels.com/v1/search";
@@ -70,14 +70,26 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .await?;
 
     if res.status().is_success() {
-        let body = res.bytes().await?;
-        let buffer = body.to_vec();
+        println!("{:?}", res.content_length());
+        let mut stream = tokio_stream::iter(res.bytes().await?);
+        let mut bytes = Vec::new();
+
+        while let Some(v) = stream.next().await {
+            // println!("GOT = {:?}", v);
+            bytes.push(v);
+        }
+
+        println!("{:?}", bytes.len());
+        // let body = res.bytes().await?;
+        // let buffer = body.to_vec();
+        // println!("{:?}", buffer);
 
         // Process each byte of the downloaded image
-        for byte in buffer {
-            // Do something with each byte
-            println!("Byte: {}", byte);
-        }
+        // for byte in buffer {
+
+        //     // Do something with each byte
+        //     // println!("Byte: {}", byte);
+        // }
     } else {
         println!("Failed to download photo");
         process::exit(0);
