@@ -22,16 +22,18 @@ struct Photo {
 
 #[derive(Deserialize, Debug)]
 struct PhotoSrc {
-    large: String,
+    // large: String,
     medium: String,
-    small: String,
+    // small: String,
 }
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
     #[arg(short, long)]
-    name: String,
+    seed: String,
+    // #[arg(short, long)]
+    // size: String,
 }
 
 #[tokio::main]
@@ -43,9 +45,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let mut headers = header::HeaderMap::new();
     headers.insert(header::AUTHORIZATION, API_KEY.parse().unwrap());
 
-    let query_params = [("query", "nature")];
+    println!("Seed: {}!", args.seed);
 
-    println!("Hello {}!", args.name);
+    let query_params = [("query", args.seed)];
 
     let res = client
         .get(BASE_API_URL)
@@ -66,7 +68,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let first_photo = photos.first().expect("Should be a photo");
 
     let res = client
-        .get(&first_photo.src.small)
+        .get(&first_photo.src.medium)
         .headers(headers)
         .send()
         .await?;
