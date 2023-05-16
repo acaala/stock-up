@@ -1,4 +1,4 @@
-use std::{error::Error, process};
+use std::{error::Error, fs::File, io::Write, process};
 
 use clap::{arg, Parser};
 use reqwest::header;
@@ -6,6 +6,8 @@ use reqwest::header;
 use serde::Deserialize;
 use serde_json::Value;
 use tokio_stream::StreamExt;
+
+use indicatif::ProgressBar;
 
 const API_KEY: &str = "l00OLYhljlpXrMrbkUMNoydmez8duIPj2YpkXtpBeG3xmkw78yLUQro0";
 const BASE_API_URL: &str = "https://api.pexels.com/v1/search";
@@ -70,16 +72,20 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .await?;
 
     if res.status().is_success() {
-        println!("{:?}", res.content_length());
+        let bar = ProgressBar::new(res.content_length().unwrap());
+
         let mut stream = tokio_stream::iter(res.bytes().await?);
-        let mut bytes = Vec::new();
+
+        println!("Saving File {}", first_photo.alt);
+        let mut file = File::create("image.jpg")?;
 
         while let Some(v) = stream.next().await {
-            // println!("GOT = {:?}", v);
-            bytes.push(v);
+            file.write_all(&[v])?;
+            bar.inc(1);
         }
 
-        println!("{:?}", bytes.len());
+        bar.finish();
+
         // let body = res.bytes().await?;
         // let buffer = body.to_vec();
         // println!("{:?}", buffer);
