@@ -14,17 +14,15 @@ const BASE_API_URL: &str = "https://api.pexels.com/v1/search";
 
 #[derive(Deserialize, Debug)]
 struct Photo {
-    url: String,
-    id: i32,
     alt: String,
     src: PhotoSrc,
 }
 
 #[derive(Deserialize, Debug)]
 struct PhotoSrc {
-    // large: String,
+    large: String,
     medium: String,
-    // small: String,
+    small: String,
 }
 
 #[derive(Parser, Debug)]
@@ -32,8 +30,8 @@ struct PhotoSrc {
 struct Args {
     #[arg(short, long)]
     seed: String,
-    // #[arg(short, long)]
-    // size: String,
+    #[arg(short, long)]
+    image_size: String,
 }
 
 #[tokio::main]
@@ -67,11 +65,16 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let first_photo = photos.first().expect("Should be a photo");
 
-    let res = client
-        .get(&first_photo.src.medium)
-        .headers(headers)
-        .send()
-        .await?;
+    let size = args.image_size.trim().to_lowercase();
+
+    let photo_src = match size.as_str() {
+        "large" | "l" => &first_photo.src.large,
+        "medium" | "m" => &first_photo.src.medium,
+        "small" | "s" => &first_photo.src.small,
+        _ => &first_photo.src.medium,
+    };
+
+    let res = client.get(photo_src).headers(headers).send().await?;
 
     if res.status().is_success() {
         let bar = ProgressBar::new(res.content_length().unwrap());
@@ -87,29 +90,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
         }
 
         bar.finish();
-
-        // let body = res.bytes().await?;
-        // let buffer = body.to_vec();
-        // println!("{:?}", buffer);
-
-        // Process each byte of the downloaded image
-        // for byte in buffer {
-
-        //     // Do something with each byte
-        //     // println!("Byte: {}", byte);
-        // }
     } else {
         println!("Failed to download photo");
         process::exit(0);
     }
-
-    // let res = first_photo.get(BASE_API_URL).headers(headers)
-    // let mut photos: Vec<Photo> = Vec::new();
-
-    // for photo in json_photos.iter() {
-    //     println!("{:#?}", photo);
-    //     photos.push(photo);
-    // }
 
     Ok(())
 }
