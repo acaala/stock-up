@@ -1,8 +1,15 @@
+use dialoguer::{theme::ColorfulTheme, Select};
 use indicatif::ProgressBar;
 use reqwest::{header, Response};
 use serde::Deserialize;
 use serde_json::Value;
-use std::{error::Error, fs::File, io::Write, path::Path, process};
+use std::{
+    error::Error,
+    fs::{self, File},
+    io::Write,
+    path::Path,
+    process,
+};
 use tokio_stream::StreamExt;
 
 const API_KEY: &str = "l00OLYhljlpXrMrbkUMNoydmez8duIPj2YpkXtpBeG3xmkw78yLUQro0";
@@ -110,3 +117,41 @@ pub async fn get_one(seed: &str, image_size: &str, target_dir: &str) -> Result<(
 }
 
 // Get Many
+pub async fn get_many(
+    seed: &str,
+    image_size: &str,
+    target_dir: &str,
+) -> Result<(), Box<dyn Error>> {
+    let res = get_photos_from_api(seed).await?;
+
+    let res_json: Value = serde_json::from_str(&res).expect("Should parse result");
+
+    let json_photos: Vec<Photo> = serde_json::from_value(res_json["photos"].clone())
+        .expect("Should pasrse res photo array into type");
+
+    let photos: Vec<Photo> = json_photos.into_iter().collect();
+
+    let selections: Vec<String> = photos.iter().map(|photo| photo.alt.clone()).collect();
+
+    let selection = Select::with_theme(&ColorfulTheme::default())
+        .with_prompt("Pick your flavor")
+        .default(0)
+        .items(&selections[..])
+        .interact()
+        .unwrap();
+
+    let selected_photo = &photos[selection];
+
+    let size = image_size.trim().to_lowercase();
+
+    let photo_src = match size.as_str() {
+        "large" | "l" => &selected_photo.src.large,
+        "medium" | "m" => &selected_photo.src.medium,
+        "small" | "s" => &selected_photo.src.small,
+        _ => &selected_photo.src.medium,
+    };
+
+    download_one(photo_src, &selected_photo.alt, &target_dir).await?;
+
+    Ok(())
+}
