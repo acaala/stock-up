@@ -2,7 +2,7 @@ use indicatif::ProgressBar;
 use reqwest::{header, Response};
 use serde::Deserialize;
 use serde_json::Value;
-use std::{error::Error, fs::File, io::Write, process};
+use std::{error::Error, fs::File, io::Write, path::Path, process};
 use tokio_stream::StreamExt;
 
 const API_KEY: &str = "l00OLYhljlpXrMrbkUMNoydmez8duIPj2YpkXtpBeG3xmkw78yLUQro0";
@@ -58,14 +58,18 @@ async fn get_photo_from_api(url: &str) -> Result<Response, Box<dyn Error>> {
 }
 
 // Download One
-async fn download_one(url: &str, alt: &str) -> Result<(), Box<dyn Error>> {
+async fn download_one(url: &str, alt: &str, target_dir: &str) -> Result<(), Box<dyn Error>> {
     let res = get_photo_from_api(url).await?;
 
     let bar = ProgressBar::new(res.content_length().unwrap());
     let mut stream = tokio_stream::iter(res.bytes().await?);
 
     println!("Saving File {}", alt);
-    let mut file = File::create("image.jpg")?;
+
+    let path_string = format!("{}/{}", target_dir, "image.jpg");
+    let path = Path::new(&path_string);
+
+    let mut file = File::create(path)?;
 
     while let Some(v) = stream.next().await {
         file.write_all(&[v])?;
@@ -79,7 +83,7 @@ async fn download_one(url: &str, alt: &str) -> Result<(), Box<dyn Error>> {
 // Download X Spin up new thread per download.
 
 // Get One
-pub async fn get_one(seed: &str, image_size: &str) -> Result<(), Box<dyn Error>> {
+pub async fn get_one(seed: &str, image_size: &str, target_dir: &str) -> Result<(), Box<dyn Error>> {
     let res = get_photos_from_api(seed).await?;
 
     let res_json: Value = serde_json::from_str(&res).expect("Should parse result");
@@ -100,7 +104,7 @@ pub async fn get_one(seed: &str, image_size: &str) -> Result<(), Box<dyn Error>>
         _ => &first_photo.src.medium,
     };
 
-    download_one(photo_src, &first_photo.alt).await?;
+    download_one(photo_src, &first_photo.alt, &target_dir).await?;
 
     Ok(())
 }
