@@ -1,19 +1,15 @@
 use bytes_stream::photo::{get_many, get_one};
 use clap::{arg, Parser};
-use std::io::Write;
+use std::fs;
+
+use std::error::Error;
 use std::path::Path;
-use std::{
-    error::Error,
-    fs::{read_to_string, File},
-    io,
-};
-use std::{fs, process};
 
 use rand::Rng;
 
-const TARGET_DIR: &str = &"./images";
+const TARGET_DIR: &str = "./images";
 
-const SEEDS: &'static [&str] = &[
+const SEEDS: &[&str] = &[
     "nature", "cars", "coffee", "laptops", "shops", "sky", "science", "space",
 ];
 #[derive(Parser, Debug)]
@@ -47,21 +43,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
         opener::open(TARGET_DIR).expect("should open file explorer");
         return Ok(());
     }
-
-    // let target_dir = read_to_string("target_dir.txt").unwrap_or_else(|_| {
-    //     let mut file = File::create("target_dir.txt").expect("should create file");
-
-    //     println!("Enter the default download location:");
-    //     let mut input = String::new();
-
-    //     io::stdin().read_line(&mut input).unwrap();
-
-    //     file.write_all(input.as_bytes()).unwrap();
-
-    //     println!("Set default download location to: {}", input);
-
-    //     input
-    // });
 
     let seed = match args.seed.as_str() {
         "empty" => {

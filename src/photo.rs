@@ -3,13 +3,7 @@ use indicatif::ProgressBar;
 use reqwest::{header, Response};
 use serde::Deserialize;
 use serde_json::Value;
-use std::{
-    error::Error,
-    fs::{self, File},
-    io::Write,
-    path::Path,
-    process,
-};
+use std::{error::Error, fs::File, io::Write, path::Path, process};
 use tokio_stream::StreamExt;
 
 const API_KEY: &str = "l00OLYhljlpXrMrbkUMNoydmez8duIPj2YpkXtpBeG3xmkw78yLUQro0";
@@ -111,7 +105,7 @@ pub async fn get_one(seed: &str, image_size: &str, target_dir: &str) -> Result<(
         _ => &first_photo.src.medium,
     };
 
-    download_one(photo_src, &first_photo.alt, &target_dir).await?;
+    download_one(photo_src, &first_photo.alt, target_dir).await?;
 
     Ok(())
 }
@@ -151,7 +145,7 @@ pub async fn get_many(
         _ => &selected_photo.src.medium,
     };
 
-    download_one(photo_src, &selected_photo.alt, &target_dir).await?;
+    download_one(photo_src, &selected_photo.alt, target_dir).await?;
 
     Ok(())
 }
