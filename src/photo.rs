@@ -1,5 +1,6 @@
 use dialoguer::{theme::ColorfulTheme, Select};
 use indicatif::ProgressBar;
+use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use reqwest::{header, Response};
 use serde::Deserialize;
 use serde_json::Value;
@@ -59,7 +60,12 @@ async fn get_photo_from_api(url: &str) -> Result<Response, Box<dyn Error>> {
 }
 
 // Download One
-async fn download_one(url: &str, alt: &str, target_dir: &str) -> Result<(), Box<dyn Error>> {
+async fn download_one(
+    url: &str,
+    alt: &str,
+    target_dir: &str,
+    seed: &str,
+) -> Result<(), Box<dyn Error>> {
     let res = get_photo_from_api(url).await?;
 
     let bar = ProgressBar::new(res.content_length().unwrap());
@@ -67,7 +73,13 @@ async fn download_one(url: &str, alt: &str, target_dir: &str) -> Result<(), Box<
 
     println!("Saving File {}", alt);
 
-    let path_string = format!("{}/{}", target_dir, "image.jpg");
+    let rand_string: String = thread_rng()
+        .sample_iter(&Alphanumeric)
+        .take(5)
+        .map(char::from)
+        .collect();
+
+    let path_string = format!("{}/{}-{}.{}", target_dir, seed, rand_string, "jpg");
     let path = Path::new(&path_string);
 
     let mut file = File::create(path)?;
@@ -105,7 +117,7 @@ pub async fn get_one(seed: &str, image_size: &str, target_dir: &str) -> Result<(
         _ => &first_photo.src.medium,
     };
 
-    download_one(photo_src, &first_photo.alt, target_dir).await?;
+    download_one(photo_src, &first_photo.alt, target_dir, seed).await?;
 
     Ok(())
 }
@@ -128,7 +140,7 @@ pub async fn get_many(
     let selections: Vec<String> = photos.iter().map(|photo| photo.alt.clone()).collect();
 
     let selection = Select::with_theme(&ColorfulTheme::default())
-        .with_prompt("Pick your flavor")
+        .with_prompt("Select an image:")
         .default(0)
         .items(&selections[..])
         .interact()
@@ -145,7 +157,7 @@ pub async fn get_many(
         _ => &selected_photo.src.medium,
     };
 
-    download_one(photo_src, &selected_photo.alt, target_dir).await?;
+    download_one(photo_src, &selected_photo.alt, target_dir, seed).await?;
 
     Ok(())
 }

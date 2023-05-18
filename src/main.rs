@@ -1,11 +1,10 @@
 use bytes_stream::photo::{get_many, get_one};
 use clap::{arg, Parser};
+use rand::Rng;
 use std::fs;
 
 use std::error::Error;
 use std::path::Path;
-
-use rand::Rng;
 
 const TARGET_DIR: &str = "./images";
 
