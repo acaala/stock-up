@@ -1,4 +1,4 @@
-use bytes_stream::photo::{get_many, get_one};
+use bytes_stream::photo::{get_many, get_one, get_one_from_ai};
 use clap::{arg, Parser};
 use rand::Rng;
 use std::fs;
@@ -22,6 +22,9 @@ struct Args {
 
     #[arg(short, long, default_value_t = false)]
     list: bool,
+
+    #[arg(short, long, default_value = "")]
+    prompt: String,
 
     #[arg(short = 'O', long, default_value_t = false)]
     open_image_directory: bool,
@@ -53,8 +56,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     if args.list {
         get_many(seed, &args.image_size, TARGET_DIR).await?;
-    } else {
+    } else if args.prompt.is_empty() {
         get_one(seed, &args.image_size, TARGET_DIR).await?;
+    } else {
+        get_one_from_ai(TARGET_DIR, &args.prompt).await?
     }
 
     if args.open_after_download {

@@ -3,13 +3,15 @@ use indicatif::ProgressBar;
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use reqwest::{header, Response};
 use serde::Deserialize;
-use serde_json::Value;
+use serde_json::{json, Value};
 use std::{error::Error, fs::File, io::Write, path::Path, process};
 use tokio_stream::StreamExt;
 
 const API_KEY: &str = "l00OLYhljlpXrMrbkUMNoydmez8duIPj2YpkXtpBeG3xmkw78yLUQro0";
 const BASE_API_URL: &str = "https://api.pexels.com/v1/search";
 
+const DALLE_API_KEY: &str = "Bearer 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";
+const DALLE_BASE_URL: &str = "https://api.openai.com/v1/images/generations";
 #[derive(Deserialize, Debug)]
 struct Photo {
     alt: String,
@@ -41,6 +43,34 @@ async fn get_photos_from_api(seed: &str) -> Result<String, Box<dyn Error>> {
         .await?;
 
     Ok(res)
+}
+
+async fn get_photos_from_ai(prompt: &str) -> Result<String, Box<dyn Error>> {
+    let client = reqwest::Client::new();
+
+    let mut headers = header::HeaderMap::new();
+    // headers.insert(header::AUTHORIZATION, DALLE_API_KEY.parse().unwrap());
+
+    let dalle_params = json!({
+        "prompt": prompt,
+        "n": 1,
+        "size": "1024x1024",
+    });
+
+    let res = client
+        .post(DALLE_BASE_URL)
+        .headers(headers.clone())
+        .json(&dalle_params)
+        .send()
+        .await?
+        .text()
+        .await?;
+
+    let url: Value = serde_json::from_str(&res).unwrap();
+
+    let url: String = serde_json::from_value(url["data"][0]["url"].clone()).unwrap();
+
+    Ok(url)
 }
 
 async fn get_photo_from_api(url: &str) -> Result<Response, Box<dyn Error>> {
@@ -95,6 +125,14 @@ async fn download_one(
 
 // Download X Spin up new thread per download.
 
+pub async fn get_one_from_ai(target_dir: &str, prompt: &str) -> Result<(), Box<dyn Error>> {
+    let res = get_photos_from_ai(prompt).await?;
+
+    download_one(&res, "Generating From DALLE", target_dir, "ai").await?;
+
+    Ok(())
+}
+
 // Get One
 pub async fn get_one(seed: &str, image_size: &str, target_dir: &str) -> Result<(), Box<dyn Error>> {
     let res = get_photos_from_api(seed).await?;
@@ -117,7 +155,7 @@ pub async fn get_one(seed: &str, image_size: &str, target_dir: &str) -> Result<(
         _ => &first_photo.src.medium,
     };
 
-    download_one(photo_src, &first_photo.alt, target_dir, seed).await?;
+    download_one(&photo_src, &first_photo.alt, target_dir, seed).await?;
 
     Ok(())
 }
